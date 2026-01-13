@@ -1,1 +1,1 @@
-{"name":"Override User Avatars test","description":"Allows you to set a custom profile picture for any Discord user.","author":"Furretar","version":"1.0.0","main":"index.js","hash":"9a732e6dabb1f93defa1bec0f42e6a14fec0bc959e54c3f2036a7a76e33da574"}
+{"name":"Override User Avatars test","description":"Allows you to set a custom profile picture for any Discord user.","authors":[{"name":"furretar","id":"291303812516544524"}],"version":"1.0.0","main":"index.js","hash":"9a732e6dabb1f93defa1bec0f42e6a14fec0bc959e54c3f2036a7a76e33da574"}
