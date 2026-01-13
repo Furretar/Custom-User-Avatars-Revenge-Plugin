@@ -1,56 +1,92 @@
-import { findByProps } from "@revenge/modules/webpack";
-import { before, Unpatch } from "@revenge/modules/patcher";
+import { before, after } from "@vendetta/patcher";
+import { findByName, findByProps } from "@vendetta/metro";
+import { findInReactTree } from "@vendetta/utils";
 
-interface User {
-    id: string;
-    username?: string;
-    [key: string]: any;
-}
+const Avatar = findByProps("getStatusSize");
+const DisplayBanner = findByName("DisplayBanner", false);
+const ImageResolver = findByProps("getAvatarDecorationURL", "default");
+const RowManager = findByName("RowManager");
 
-const TAG = "[avatar-override]";
-const TARGET_USER_ID = "376407743776686094";
-const OVERRIDE_IMAGE_URL =
-    "https://cdn.donmai.us/sample/a5/f2/__furina_genshin_impact_drawn_by_overlord_overlord80000__sample-a5f2de3aa9623900360f7c867f42519c.jpg";
+const patches: Function[] = [];
 
-let UserUtils: { getAvatarURL: (user: User) => string };
-let unpatch: Unpatch | null;
-
-export function onLoad(): void {
-    console.log(`${TAG} loading`);
-
-    try {
-        UserUtils = findByProps < { getAvatarURL: (user: User) => string } > ("getAvatarURL");
-        console.log(`${TAG} UserUtils found`, UserUtils);
-    } catch (e) {
-        console.error(`${TAG} failed to find UserUtils`, e);
-        return;
+export const onLoad = () => {
+    // Guild Icons
+    if (typeof findByName("GuildIcon").prototype.render !== "undefined") {
+        const GuildIcon = findByName("GuildIcon");
+        patches.push(
+            before("render", GuildIcon.prototype, function () {
+                this.props.animate = true;
+            })
+        );
+    } else {
+        const GuildIcon = findByName("GuildIcon", false);
+        patches.push(
+            before("default", GuildIcon, ([props]) => {
+                props.animate = true;
+            })
+        );
     }
 
-    unpatch = before("getAvatarURL", UserUtils, (args: [User]) => {
-        const [user] = args;
+    // Avatars (not used by chat)
+    patches.push(
+        before("type", Avatar.default, function ([props]) {
+            props.animate = true;
+        })
+    );
 
-        if (!user) {
-            console.log(`${TAG} getAvatarURL called with no user`);
-            return;
-        }
+    // Profile Banners (bypasses GIF playback option)
+    patches.push(
+        after("default", DisplayBanner, function (args, ret) {
+            const ClickWrapperProps = findInReactTree(
+                ret,
+                (x) => x.accessibilityRole == "image" && x.onPress != null
+            );
+            const Banner = findInReactTree(
+                ClickWrapperProps,
+                (x) => x.type?.name == "ProfileBanner"
+            );
+            if (
+                Banner &&
+                Banner.key.endsWith("-false") &&
+                Banner.props.bannerSource?.uri?.indexOf("/a_") > -1
+            ) {
+                ClickWrapperProps.onPress();
+            }
+        })
+    );
 
-        console.log(`${TAG} avatar request for user`, user.id);
+    // Catch-all
+    patches.push(
+        before("getAvatarDecorationURL", ImageResolver, ([props]) => {
+            props.canAnimate = true;
+        })
+    );
+    patches.push(
+        before("getUserAvatarURL", ImageResolver, (args) => {
+            args[1] = true;
+        })
+    );
+    patches.push(
+        before("getGuildMemberAvatarURLSimple", ImageResolver, ([props]) => {
+            props.canAnimate = true;
+        })
+    );
 
-        if (user.id !== TARGET_USER_ID) return;
+    // Chat (iOS only?)
+    patches.push(
+        after("generate", RowManager.prototype, ([row], ret) => {
+            if (row.rowType !== 1) return;
 
-        console.log(`${TAG} overriding avatar for target user`);
-        return OVERRIDE_IMAGE_URL;
-    });
+            const { message } = ret;
+            if (message.avatarURL?.indexOf("a_") > -1) {
+                message.avatarURL = message.avatarURL.replace(".webp", ".gif");
+            }
+        })
+    );
+};
 
-    console.log(`${TAG} patch applied`);
-}
-
-export function onUnload(): void {
-    console.log(`${TAG} unloading`);
-
-    if (unpatch) {
-        unpatch();
-        console.log(`${TAG} patch removed`);
-        unpatch = null;
+export const onUnload = () => {
+    for (const unpatch of patches) {
+        unpatch?.();
     }
-}
+};
