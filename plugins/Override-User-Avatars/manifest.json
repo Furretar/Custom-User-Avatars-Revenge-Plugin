@@ -1,12 +1,18 @@
 {
-  "name": "Override User Avatars test",
-  "description": "Allows you to set a custom profile picture for any Discord user.",
-  "authors": [
-    {
-        "name": "furretar",
-        "id": "291303812516544524"
+    "name": "Always Animate",
+    "description": "Always animates guild icons and avatars.",
+    "authors": [
+        {
+            "name": "Cynosphere",
+            "id": "150745989836308480"
+        },
+        {
+            "name": "Rico040",
+            "id": "619474349845643275"
+        }
+    ],
+    "main": "src/index.ts",
+    "vendetta": {
+        "icon": "icon-qs-gifs"
     }
-],
-  "version": "1.0.0",
-  "main": "src/index.ts"
 }
