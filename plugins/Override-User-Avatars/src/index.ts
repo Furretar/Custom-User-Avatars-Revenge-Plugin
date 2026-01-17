@@ -4,6 +4,7 @@ import { FluxDispatcher } from "@vendetta/metro/common";
 const TAG = "[custom-avatars]";
 const TARGET_ID = "376407743776686094";
 const OVERRIDE_URL = "https://cdn.discordapp.com/attachments/1239712651710435348/1462042785979826306/furina2.png?ex=696cc0f3&is=696b6f73&hm=76a27d1fd87da7033fce3f973630d8277aba24237e45eef332d3bd63400873b0";
+
 let patches = [];
 
 export function onLoad(): void {
@@ -26,10 +27,12 @@ export function onLoad(): void {
     avatarModule.getUserAvatarURL = function (...args) {
         const user = args[0];
 
+        // Only modify if this is the target user
         if (user?.id === TARGET_ID) {
             return OVERRIDE_URL;
         }
 
+        // For everyone else, return the original
         return originalGetUserAvatarURL.apply(this, args);
     };
     patches.push(() => { avatarModule.getUserAvatarURL = originalGetUserAvatarURL; });
@@ -40,14 +43,21 @@ export function onLoad(): void {
         avatarModule.getUserAvatarSource = function (...args) {
             const user = args[0];
 
+            // Only modify if this is the target user
             if (user?.id === TARGET_ID) {
+                // Get the original source first
                 const original = originalGetUserAvatarSource.apply(this, args);
-                return {
-                    ...original,
-                    uri: OVERRIDE_URL
-                };
+
+                // Only modify if we got a valid original (to avoid breaking others)
+                if (original) {
+                    return {
+                        ...original,
+                        uri: OVERRIDE_URL
+                    };
+                }
             }
 
+            // For everyone else, return the original
             return originalGetUserAvatarSource.apply(this, args);
         };
         patches.push(() => { avatarModule.getUserAvatarSource = originalGetUserAvatarSource; });
@@ -57,17 +67,26 @@ export function onLoad(): void {
     if (avatarModule.getGuildMemberAvatarSource) {
         const originalGetGuildMemberAvatarSource = avatarModule.getGuildMemberAvatarSource;
         avatarModule.getGuildMemberAvatarSource = function (...args) {
-            const [guildId, userId] = args;
+            // Try to get the original first to avoid breaking anything
+            const original = originalGetGuildMemberAvatarSource.apply(this, args);
 
-            if (userId === TARGET_ID) {
-                const original = originalGetGuildMemberAvatarSource.apply(this, args);
+            // Try different argument patterns since we don't know the exact signature
+            const guildId = args[0];
+            const userId = args[1];
+            const user = args[0]; // might be user object instead
+
+            // Check if the userId matches (could be in different positions)
+            const isTarget = userId === TARGET_ID || user?.id === TARGET_ID;
+
+            if (isTarget && original) {
                 return {
                     ...original,
                     uri: OVERRIDE_URL
                 };
             }
 
-            return originalGetGuildMemberAvatarSource.apply(this, args);
+            // Return original for everyone else
+            return original;
         };
         patches.push(() => { avatarModule.getGuildMemberAvatarSource = originalGetGuildMemberAvatarSource; });
     }
@@ -76,7 +95,6 @@ export function onLoad(): void {
 
     // Force a UI refresh to apply changes immediately
     try {
-        // Dispatch a user update event to force re-render
         FluxDispatcher.dispatch({
             type: "USER_UPDATE",
             user: UserStore.getUser(TARGET_ID)
@@ -95,17 +113,4 @@ export function onUnload(): void {
     patches = [];
 
     console.log(`${TAG} unloaded`);
-
-    // Force a UI refresh to restore original avatars
-    try {
-        const UserStore = findByStoreName("UserStore");
-        if (UserStore) {
-            FluxDispatcher.dispatch({
-                type: "USER_UPDATE",
-                user: UserStore.getUser(TARGET_ID)
-            });
-        }
-    } catch (e) {
-        console.log(`${TAG} Could not trigger unload refresh`);
-    }
 }
