@@ -1,4 +1,4 @@
-import {findByProps} from "@revenge/modules/webpack";
+import { findByProps, findByStoreName } from "@vendetta/metro";
 
 const TAG = "[custom-avatars]";
 const target_id = "376407743776686094";
@@ -6,6 +6,7 @@ const target_id = "376407743776686094";
 export function onLoad(): void {
     console.log(`${TAG} loaded`);
 
+    const UserStore = findByProps("getUser");
 
 
 
