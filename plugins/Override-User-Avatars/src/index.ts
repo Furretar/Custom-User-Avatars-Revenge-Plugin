@@ -18,16 +18,15 @@ export function onLoad(): void {
         console.log(`${TAG} UserStore`);
     }
 
-    const user = UserStore.getUser(TARGET_ID);
-    if (!user) {
-        console.log(`${TAG} user not found`);
-        return;
-    } else {
-        console.log(`${TAG} user found`);
-    }
+    before("getUserAvatarURL", UserStore, (args) => {
+        const [user, animated, size] = args;
+        if (!user) return;
 
-    const avatarUrl = UserStore.getUserAvatarURL(user);
-    console.log(`${TAG} avatar URL for ${user.username}: ${avatarUrl}`);
+        if (user.id === TARGET_ID) {
+            // return the override URL directly
+            return OVERRIDE_URL;
+        }
+    });
 }
 
 export function onUnload(): void {
