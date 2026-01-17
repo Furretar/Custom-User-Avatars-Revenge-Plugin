@@ -19,11 +19,15 @@ export function onLoad(): void {
     }
 
     before("getUserAvatarURL", UserStore, (args) => {
+        console.log(`${TAG} here1`);
         const [user, animated, size] = args;
+        console.log(`${TAG} here2`);
         if (!user) return;
+        console.log(`${TAG} here3`);
 
         if (user.id === TARGET_ID) {
             // return the override URL directly
+            console.log(`${TAG} here4`);
             return OVERRIDE_URL;
         }
     });
