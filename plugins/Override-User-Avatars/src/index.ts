@@ -10,11 +10,9 @@ export function onLoad(): void {
 
     if (!UserStore) {
         console.log(`${TAG} not found`);
-        return;
     }
     else {
         console.log(`${TAG} found`);
-        return;
     }
 
 
