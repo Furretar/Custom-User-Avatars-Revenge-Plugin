@@ -27,12 +27,12 @@ export function onLoad(): void {
     avatarModule.getUserAvatarURL = function (...args) {
         const user = args[0];
 
-        // Only modify if this is the target user
+        // Only intercept for target user
         if (user?.id === TARGET_ID) {
             return OVERRIDE_URL;
         }
 
-        // For everyone else, return the original
+        // Don't touch anyone else - just pass through
         return originalGetUserAvatarURL.apply(this, args);
     };
     patches.push(() => { avatarModule.getUserAvatarURL = originalGetUserAvatarURL; });
@@ -43,12 +43,9 @@ export function onLoad(): void {
         avatarModule.getUserAvatarSource = function (...args) {
             const user = args[0];
 
-            // Only modify if this is the target user
+            // Only intercept for target user
             if (user?.id === TARGET_ID) {
-                // Get the original source first
                 const original = originalGetUserAvatarSource.apply(this, args);
-
-                // Only modify if we got a valid original (to avoid breaking others)
                 if (original) {
                     return {
                         ...original,
@@ -57,7 +54,7 @@ export function onLoad(): void {
                 }
             }
 
-            // For everyone else, return the original
+            // Don't touch anyone else - just pass through
             return originalGetUserAvatarSource.apply(this, args);
         };
         patches.push(() => { avatarModule.getUserAvatarSource = originalGetUserAvatarSource; });
@@ -67,26 +64,22 @@ export function onLoad(): void {
     if (avatarModule.getGuildMemberAvatarSource) {
         const originalGetGuildMemberAvatarSource = avatarModule.getGuildMemberAvatarSource;
         avatarModule.getGuildMemberAvatarSource = function (...args) {
-            // Try to get the original first to avoid breaking anything
-            const original = originalGetGuildMemberAvatarSource.apply(this, args);
-
-            // Try different argument patterns since we don't know the exact signature
-            const guildId = args[0];
             const userId = args[1];
-            const user = args[0]; // might be user object instead
+            const user = args[0];
 
-            // Check if the userId matches (could be in different positions)
-            const isTarget = userId === TARGET_ID || user?.id === TARGET_ID;
-
-            if (isTarget && original) {
-                return {
-                    ...original,
-                    uri: OVERRIDE_URL
-                };
+            // Only intercept for target user
+            if (userId === TARGET_ID || user?.id === TARGET_ID) {
+                const original = originalGetGuildMemberAvatarSource.apply(this, args);
+                if (original) {
+                    return {
+                        ...original,
+                        uri: OVERRIDE_URL
+                    };
+                }
             }
 
-            // Return original for everyone else
-            return original;
+            // Don't touch anyone else - just pass through
+            return originalGetGuildMemberAvatarSource.apply(this, args);
         };
         patches.push(() => { avatarModule.getGuildMemberAvatarSource = originalGetGuildMemberAvatarSource; });
     }
