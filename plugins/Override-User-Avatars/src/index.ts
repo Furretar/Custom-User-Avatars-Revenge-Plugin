@@ -60,30 +60,6 @@ export function onLoad(): void {
         patches.push(() => { avatarModule.getUserAvatarSource = originalGetUserAvatarSource; });
     }
 
-    // Patch getGuildMemberAvatarSource for guild contexts
-    if (avatarModule.getGuildMemberAvatarSource) {
-        const originalGetGuildMemberAvatarSource = avatarModule.getGuildMemberAvatarSource;
-        avatarModule.getGuildMemberAvatarSource = function (...args) {
-            const userId = args[1];
-            const user = args[0];
-
-            // Only intercept for target user
-            if (userId === TARGET_ID || user?.id === TARGET_ID) {
-                const original = originalGetGuildMemberAvatarSource.apply(this, args);
-                if (original) {
-                    return {
-                        ...original,
-                        uri: OVERRIDE_URL
-                    };
-                }
-            }
-
-            // Don't touch anyone else - just pass through
-            return originalGetGuildMemberAvatarSource.apply(this, args);
-        };
-        patches.push(() => { avatarModule.getGuildMemberAvatarSource = originalGetGuildMemberAvatarSource; });
-    }
-
     console.log(`${TAG} Patches applied!`);
 
     // Force a UI refresh to apply changes immediately
