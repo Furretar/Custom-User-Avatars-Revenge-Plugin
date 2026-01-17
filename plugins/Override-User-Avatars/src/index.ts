@@ -26,7 +26,7 @@ export function onLoad(): void {
         console.log(`${TAG} user found`);
     }
 
-    const avatarUrl = UserStore.getAvatarURL(user);
+    const avatarUrl = UserStore.getUserAvatarURL(user);
     console.log(`${TAG} avatar URL for ${user.username}: ${avatarUrl}`);
 }
 
