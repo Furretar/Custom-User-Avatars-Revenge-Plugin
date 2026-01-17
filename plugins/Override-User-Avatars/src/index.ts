@@ -2,7 +2,7 @@ import { findByProps, findByStoreName } from "@vendetta/metro";
 
 const TAG = "[custom-avatars]";
 const TARGET_ID = "376407743776686094";
-const OVERRIDE_URL = "https://avatars.githubusercontent.com/u/101470861?v=4&size=64";
+const OVERRIDE_URL = "https://media.discordapp.net/stickers/1462041695284756626.webp?size=160&quality=lossless";
 let patches = [];
 
 export function onLoad(): void {
