@@ -1,4 +1,5 @@
 import { findByProps, findByStoreName } from "@vendetta/metro";
+import { FluxDispatcher } from "@vendetta/metro/common";
 
 const TAG = "[custom-avatars]";
 const TARGET_ID = "376407743776686094";
@@ -7,8 +8,6 @@ let patches = [];
 
 export function onLoad(): void {
     console.log(`${TAG} loaded`);
-    console.log(`${TAG} Target ID: ${TARGET_ID}`);
-    console.log(`${TAG} Override URL: ${OVERRIDE_URL}`);
 
     const UserStore = findByStoreName("UserStore");
     if (!UserStore) {
@@ -16,25 +15,18 @@ export function onLoad(): void {
         return;
     }
 
-    const targetUser = UserStore.getUser(TARGET_ID);
-    console.log(`${TAG} Target user:`, targetUser?.username, targetUser?.id);
-
     const avatarModule = findByProps("getUserAvatarURL");
     if (!avatarModule) {
         console.log(`${TAG} Avatar module not found`);
         return;
     }
 
-    console.log(`${TAG} Found functions:`, Object.keys(avatarModule).filter(k => k.includes('Avatar')));
-
     // Patch getUserAvatarURL
     const originalGetUserAvatarURL = avatarModule.getUserAvatarURL;
     avatarModule.getUserAvatarURL = function (...args) {
         const user = args[0];
-        console.log(`${TAG} [getUserAvatarURL] called for:`, user?.username, user?.id);
 
         if (user?.id === TARGET_ID) {
-            console.log(`${TAG} ✅ MATCH in getUserAvatarURL! Returning custom URL`);
             return OVERRIDE_URL;
         }
 
@@ -42,78 +34,57 @@ export function onLoad(): void {
     };
     patches.push(() => { avatarModule.getUserAvatarURL = originalGetUserAvatarURL; });
 
-    // Patch getUserAvatarSource (this is likely what mobile uses!)
+    // Patch getUserAvatarSource - THIS IS THE KEY ONE FOR MOBILE
     if (avatarModule.getUserAvatarSource) {
         const originalGetUserAvatarSource = avatarModule.getUserAvatarSource;
         avatarModule.getUserAvatarSource = function (...args) {
             const user = args[0];
-            console.log(`${TAG} [getUserAvatarSource] called for:`, user?.username, user?.id);
 
             if (user?.id === TARGET_ID) {
-                console.log(`${TAG} ✅ MATCH in getUserAvatarSource! Returning custom source`);
-                return { uri: OVERRIDE_URL };
+                const original = originalGetUserAvatarSource.apply(this, args);
+                return {
+                    ...original,
+                    uri: OVERRIDE_URL
+                };
             }
 
             return originalGetUserAvatarSource.apply(this, args);
         };
         patches.push(() => { avatarModule.getUserAvatarSource = originalGetUserAvatarSource; });
-        console.log(`${TAG} Patched getUserAvatarSource`);
     }
 
-    // Patch getGuildMemberAvatarSource too (for guild contexts)
+    // Patch getGuildMemberAvatarSource for guild contexts
     if (avatarModule.getGuildMemberAvatarSource) {
         const originalGetGuildMemberAvatarSource = avatarModule.getGuildMemberAvatarSource;
         avatarModule.getGuildMemberAvatarSource = function (...args) {
             const [guildId, userId] = args;
-            console.log(`${TAG} [getGuildMemberAvatarSource] called for userId:`, userId);
 
             if (userId === TARGET_ID) {
-                console.log(`${TAG} ✅ MATCH in getGuildMemberAvatarSource! Returning custom source`);
-                return { uri: OVERRIDE_URL };
+                const original = originalGetGuildMemberAvatarSource.apply(this, args);
+                return {
+                    ...original,
+                    uri: OVERRIDE_URL
+                };
             }
 
             return originalGetGuildMemberAvatarSource.apply(this, args);
         };
         patches.push(() => { avatarModule.getGuildMemberAvatarSource = originalGetGuildMemberAvatarSource; });
-        console.log(`${TAG} Patched getGuildMemberAvatarSource`);
     }
 
-    // Also try patching the user object itself
-    const originalGetUser = UserStore.getUser;
-    UserStore.getUser = function (userId) {
-        const user = originalGetUser.call(this, userId);
+    console.log(`${TAG} Patches applied!`);
 
-        if (userId === TARGET_ID && user) {
-            console.log(`${TAG} [UserStore.getUser] Intercepted target user, modifying avatar`);
-            // Create a proxy to override avatar property
-            return new Proxy(user, {
-                get(target, prop) {
-                    if (prop === 'avatar') {
-                        console.log(`${TAG} Returning modified avatar hash`);
-                        return 'custom_override_hash';
-                    }
-                    return target[prop];
-                }
-            });
-        }
-
-        return user;
-    };
-    patches.push(() => { UserStore.getUser = originalGetUser; });
-
-    console.log(`${TAG} All patches applied!`);
-
-    // Try to force a refresh
-    setTimeout(() => {
-        console.log(`${TAG} Testing if patches work...`);
-        const testUrl = avatarModule.getUserAvatarURL(targetUser, false, 128);
-        console.log(`${TAG} Test URL result:`, testUrl);
-
-        if (avatarModule.getUserAvatarSource) {
-            const testSource = avatarModule.getUserAvatarSource(targetUser, false, 128);
-            console.log(`${TAG} Test source result:`, testSource);
-        }
-    }, 1000);
+    // Force a UI refresh to apply changes immediately
+    try {
+        // Dispatch a user update event to force re-render
+        FluxDispatcher.dispatch({
+            type: "USER_UPDATE",
+            user: UserStore.getUser(TARGET_ID)
+        });
+        console.log(`${TAG} Triggered UI refresh`);
+    } catch (e) {
+        console.log(`${TAG} Could not trigger refresh:`, e.message);
+    }
 }
 
 export function onUnload(): void {
@@ -124,4 +95,17 @@ export function onUnload(): void {
     patches = [];
 
     console.log(`${TAG} unloaded`);
+
+    // Force a UI refresh to restore original avatars
+    try {
+        const UserStore = findByStoreName("UserStore");
+        if (UserStore) {
+            FluxDispatcher.dispatch({
+                type: "USER_UPDATE",
+                user: UserStore.getUser(TARGET_ID)
+            });
+        }
+    } catch (e) {
+        console.log(`${TAG} Could not trigger unload refresh`);
+    }
 }
