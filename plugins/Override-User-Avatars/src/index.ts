@@ -15,17 +15,9 @@ export function onLoad(): void {
         return;
     }
 
-    console.log(`${TAG} UserStore found`);
+    console.log(`${TAG} UserStore found, applying permanent patch...`);
 
-    const UserUtils = findByStoreName("UserStore"); // same store has getAvatarURL via prototype
-    if (!UserUtils) {
-        console.log(`${TAG} UserUtils not found`);
-        return;
-    }
-
-    console.log(`${TAG} UserUtils found, patching avatar...`);
-
-    before("getAvatarURL", UserUtils, (args) => {
+    before("getAvatarURL", UserStore, (args) => {
         const [user] = args;
         if (!user) return;
 
@@ -35,7 +27,7 @@ export function onLoad(): void {
         }
     });
 
-    console.log(`${TAG} patch applied`);
+    console.log(`${TAG} patch applied permanently (no unpatch)`);
 }
 
 export function onUnload(): void {
