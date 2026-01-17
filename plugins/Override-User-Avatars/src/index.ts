@@ -1,13 +1,10 @@
 import { findByProps, findByStoreName } from "@vendetta/metro";
-import { before } from "@vendetta/patcher";
 
 const TAG = "[custom-avatars]";
 const TARGET_ID = "376407743776686094";
-// Using a publicly accessible image URL that won't give 403 errors
 const OVERRIDE_URL = "https://i.imgur.com/5uUZQVv.png";
 
-let unpatch;
-let functionPatch;
+let patches = [];
 
 export function onLoad(): void {
     console.log(`${TAG} loaded`);
@@ -20,77 +17,112 @@ export function onLoad(): void {
         return;
     }
 
-    // Test if we can get the target user
     const targetUser = UserStore.getUser(TARGET_ID);
-    console.log(`${TAG} Target user from store:`, targetUser);
+    console.log(`${TAG} Target user:`, targetUser?.username, targetUser?.id);
 
-    // Find the module that contains getUserAvatarURL
     const avatarModule = findByProps("getUserAvatarURL");
     if (!avatarModule) {
         console.log(`${TAG} Avatar module not found`);
         return;
     }
 
-    console.log(`${TAG} Found avatar module:`, Object.keys(avatarModule));
-    console.log(`${TAG} getUserAvatarURL type:`, typeof avatarModule.getUserAvatarURL);
+    console.log(`${TAG} Found functions:`, Object.keys(avatarModule).filter(k => k.includes('Avatar')));
 
-    // Store the original function
+    // Patch getUserAvatarURL
     const originalGetUserAvatarURL = avatarModule.getUserAvatarURL;
+    avatarModule.getUserAvatarURL = function (...args) {
+        const user = args[0];
+        console.log(`${TAG} [getUserAvatarURL] called for:`, user?.username, user?.id);
 
-    // Replace the function entirely
-    avatarModule.getUserAvatarURL = function (user, animated, size) {
-        // Log every call to see what's happening
-        const userId = user?.id;
-        const username = user?.username;
-
-        if (userId === TARGET_ID) {
-            console.log(`${TAG} ✅ MATCH! Returning custom avatar for ${username} (${userId})`);
-            console.log(`${TAG} Arguments - animated: ${animated}, size: ${size}`);
-            console.log(`${TAG} Returning URL: ${OVERRIDE_URL}`);
+        if (user?.id === TARGET_ID) {
+            console.log(`${TAG} ✅ MATCH in getUserAvatarURL! Returning custom URL`);
             return OVERRIDE_URL;
         }
 
-        // For debugging, log occasional other calls
-        if (Math.random() < 0.01) { // Log ~1% of other calls
-            console.log(`${TAG} Other user: ${username} (${userId})`);
-        }
-
-        return originalGetUserAvatarURL(user, animated, size);
+        return originalGetUserAvatarURL.apply(this, args);
     };
+    patches.push(() => { avatarModule.getUserAvatarURL = originalGetUserAvatarURL; });
 
-    // Also try patching with before() as a backup
-    unpatch = before("getUserAvatarURL", avatarModule, (args) => {
-        const [user] = args;
-        if (user?.id === TARGET_ID) {
-            console.log(`${TAG} [before patch] Intercepted for target user`);
-        }
-    });
+    // Patch getUserAvatarSource (this is likely what mobile uses!)
+    if (avatarModule.getUserAvatarSource) {
+        const originalGetUserAvatarSource = avatarModule.getUserAvatarSource;
+        avatarModule.getUserAvatarSource = function (...args) {
+            const user = args[0];
+            console.log(`${TAG} [getUserAvatarSource] called for:`, user?.username, user?.id);
 
-    console.log(`${TAG} Successfully patched getUserAvatarURL`);
+            if (user?.id === TARGET_ID) {
+                console.log(`${TAG} ✅ MATCH in getUserAvatarSource! Returning custom source`);
+                return { uri: OVERRIDE_URL };
+            }
 
-    // Force a re-render by trying to invalidate cache
-    try {
-        if (UserStore.getUser) {
-            console.log(`${TAG} Attempting to trigger user update...`);
-            UserStore.getUser(TARGET_ID);
-        }
-    } catch (e) {
-        console.log(`${TAG} Error triggering update:`, e);
+            return originalGetUserAvatarSource.apply(this, args);
+        };
+        patches.push(() => { avatarModule.getUserAvatarSource = originalGetUserAvatarSource; });
+        console.log(`${TAG} Patched getUserAvatarSource`);
     }
+
+    // Patch getGuildMemberAvatarSource too (for guild contexts)
+    if (avatarModule.getGuildMemberAvatarSource) {
+        const originalGetGuildMemberAvatarSource = avatarModule.getGuildMemberAvatarSource;
+        avatarModule.getGuildMemberAvatarSource = function (...args) {
+            const [guildId, userId] = args;
+            console.log(`${TAG} [getGuildMemberAvatarSource] called for userId:`, userId);
+
+            if (userId === TARGET_ID) {
+                console.log(`${TAG} ✅ MATCH in getGuildMemberAvatarSource! Returning custom source`);
+                return { uri: OVERRIDE_URL };
+            }
+
+            return originalGetGuildMemberAvatarSource.apply(this, args);
+        };
+        patches.push(() => { avatarModule.getGuildMemberAvatarSource = originalGetGuildMemberAvatarSource; });
+        console.log(`${TAG} Patched getGuildMemberAvatarSource`);
+    }
+
+    // Also try patching the user object itself
+    const originalGetUser = UserStore.getUser;
+    UserStore.getUser = function (userId) {
+        const user = originalGetUser.call(this, userId);
+
+        if (userId === TARGET_ID && user) {
+            console.log(`${TAG} [UserStore.getUser] Intercepted target user, modifying avatar`);
+            // Create a proxy to override avatar property
+            return new Proxy(user, {
+                get(target, prop) {
+                    if (prop === 'avatar') {
+                        console.log(`${TAG} Returning modified avatar hash`);
+                        return 'custom_override_hash';
+                    }
+                    return target[prop];
+                }
+            });
+        }
+
+        return user;
+    };
+    patches.push(() => { UserStore.getUser = originalGetUser; });
+
+    console.log(`${TAG} All patches applied!`);
+
+    // Try to force a refresh
+    setTimeout(() => {
+        console.log(`${TAG} Testing if patches work...`);
+        const testUrl = avatarModule.getUserAvatarURL(targetUser, false, 128);
+        console.log(`${TAG} Test URL result:`, testUrl);
+
+        if (avatarModule.getUserAvatarSource) {
+            const testSource = avatarModule.getUserAvatarSource(targetUser, false, 128);
+            console.log(`${TAG} Test source result:`, testSource);
+        }
+    }, 1000);
 }
 
 export function onUnload(): void {
+    console.log(`${TAG} unloading...`);
+
+    // Restore all patches
+    patches.forEach(unpatch => unpatch());
+    patches = [];
+
     console.log(`${TAG} unloaded`);
-
-    // Clean up patches
-    if (unpatch) {
-        unpatch();
-        console.log(`${TAG} Removed before patch`);
-    }
-
-    // Try to restore original function
-    const avatarModule = findByProps("getUserAvatarURL");
-    if (avatarModule && functionPatch) {
-        console.log(`${TAG} Attempting to restore original function`);
-    }
 }
