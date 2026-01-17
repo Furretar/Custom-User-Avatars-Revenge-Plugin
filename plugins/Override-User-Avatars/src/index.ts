@@ -1,26 +1,22 @@
-import { findByProps, findByStoreName } from "@vendetta/metro";
+import { findByProps } from "@vendetta/metro";
+import { before } from "@vendetta/patcher";
 
 const TAG = "[custom-avatars]";
 const target_id = "376407743776686094";
+const OVERRIDE_URL = "https://cdn.donmai.us/sample/a5/f2/__furina_genshin_impact_drawn_by_overlord_overlord80000__sample-a5f2de3aa9623900360f7c867f42519c.jpg";
 
 export function onLoad(): void {
     console.log(`${TAG} loaded`);
 
-    const UserStore = findByProps("getUser");
+    const UserUtils = findByProps("getAvatarURL");
 
-    if (!UserStore) {
-        console.log(`${TAG} userstore not found`);
+    if (!UserUtils) {
+        console.log(`${TAG} UserUtils not found`);
         return;
+    } else {
+        console.log(`${TAG} UserUtils`);
+
     }
-
-    const user = UserStore.getUser(target_id);
-
-    if (!user) {
-        console.log(`${TAG} user not found`);
-        return;
-    }
-
-    console.log(`{TAG} username: ${user.username}#${user.discriminator}`);
 }
 
 export function onUnload(): void {
