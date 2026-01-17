@@ -1,35 +1,39 @@
 import { findByProps, findByStoreName } from "@vendetta/metro";
 import { FluxDispatcher } from "@vendetta/metro/common";
+import { storage } from "@vendetta/plugin";
 
 const TAG = "[custom-avatars]";
-const TARGET_ID = "376407743776686094";
-const OVERRIDE_URL = "https://cdn.discordapp.com/attachments/1239712651710435348/1462042785979826306/furina2.png?ex=696cc0f3&is=696b6f73&hm=76a27d1fd87da7033fce3f973630d8277aba24237e45eef332d3bd63400873b0";
 
 let patches = [];
+
+export { default as settings } from "./settings";
 
 export function onLoad(): void {
     console.log(`${TAG} loaded`);
 
+    const TARGET_ID = storage.targetUserId;
+    const OVERRIDE_URL = storage.imageUrl;
+
     const UserStore = findByStoreName("UserStore");
     if (!UserStore) {
-        console.log(`${TAG} UserStore not found`);
+        console.log(`${TAG} userStore not found`);
         return;
     }
 
     const avatarModule = findByProps("getUserAvatarURL");
     if (!avatarModule) {
-        console.log(`${TAG} Avatar module not found`);
+        console.log(`${TAG} avatar module not found`);
         return;
     }
 
 
-    // Patch getUserAvatarSource - THIS IS THE KEY ONE FOR MOBILE
+    // patch getUserAvatarSource
     if (avatarModule.getUserAvatarSource) {
         const originalGetUserAvatarSource = avatarModule.getUserAvatarSource;
         avatarModule.getUserAvatarSource = function (...args) {
             const user = args[0];
 
-            // Only intercept for target user
+            // only intercept target user
             if (user?.id === TARGET_ID) {
                 const original = originalGetUserAvatarSource.apply(this, args);
                 if (original) {
@@ -40,7 +44,7 @@ export function onLoad(): void {
                 }
             }
 
-            // Don't touch anyone else - just pass through
+            // ignore everyone else
             return originalGetUserAvatarSource.apply(this, args);
         };
         patches.push(() => { avatarModule.getUserAvatarSource = originalGetUserAvatarSource; });
@@ -54,9 +58,9 @@ export function onLoad(): void {
             type: "USER_UPDATE",
             user: UserStore.getUser(TARGET_ID)
         });
-        console.log(`${TAG} Triggered UI refresh`);
+        console.log(`${TAG} ui refreshed`);
     } catch (e) {
-        console.log(`${TAG} Could not trigger refresh:`, e.message);
+        console.log(`${TAG} could not trigger refresh:`, e.message);
     }
 }
 
