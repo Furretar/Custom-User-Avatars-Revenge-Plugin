@@ -22,20 +22,6 @@ export function onLoad(): void {
         return;
     }
 
-    // Patch getUserAvatarURL
-    const originalGetUserAvatarURL = avatarModule.getUserAvatarURL;
-    avatarModule.getUserAvatarURL = function (...args) {
-        const user = args[0];
-
-        // Only intercept for target user
-        if (user?.id === TARGET_ID) {
-            return OVERRIDE_URL;
-        }
-
-        // Don't touch anyone else - just pass through
-        return originalGetUserAvatarURL.apply(this, args);
-    };
-    patches.push(() => { avatarModule.getUserAvatarURL = originalGetUserAvatarURL; });
 
     // Patch getUserAvatarSource - THIS IS THE KEY ONE FOR MOBILE
     if (avatarModule.getUserAvatarSource) {
@@ -62,7 +48,7 @@ export function onLoad(): void {
 
     console.log(`${TAG} Patches applied!`);
 
-    // Force a UI refresh to apply changes immediately
+    // refresh ui
     try {
         FluxDispatcher.dispatch({
             type: "USER_UPDATE",
@@ -77,7 +63,7 @@ export function onLoad(): void {
 export function onUnload(): void {
     console.log(`${TAG} unloading...`);
 
-    // Restore all patches
+    // restore patches
     patches.forEach(unpatch => unpatch());
     patches = [];
 
