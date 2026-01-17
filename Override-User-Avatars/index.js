@@ -1,1 +1,1 @@
-(function(n,e){"use strict";const o="[custom-avatars]";function l(){if(console.log(`${o} loaded`),e.findByProps("getUser")){console.log(`${o} found`);return}else{console.log(`${o} not found`);return}}function c(){console.log(`${o} unloaded`)}return n.onLoad=l,n.onUnload=c,n})({},webpack);
+(function(n,c){"use strict";const o="[custom-avatars]";function d(){console.log(`${o} loaded`);const l=c.findByProps("getUser");console.log(l?`${o} found`:`${o} not found`)}function a(){console.log(`${o} unloaded`)}return n.onLoad=d,n.onUnload=a,n})({},webpack);
