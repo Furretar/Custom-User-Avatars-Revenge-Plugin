@@ -2,7 +2,7 @@ import { findByProps, findByStoreName } from "@vendetta/metro";
 
 const TAG = "[custom-avatars]";
 const TARGET_ID = "376407743776686094";
-const OVERRIDE_URL = "https://cdn.donmai.us/sample/a5/f2/__furina_genshin_impact_drawn_by_overlord_overlord80000__sample-a5f2de3aa9623900360f7c867f42519c.jpg";
+const OVERRIDE_URL = "https://github.com/user-attachments/assets/cf8166f4-9cf4-453f-8b55-ba22e98c90fa";
 
 let patches = [];
 
