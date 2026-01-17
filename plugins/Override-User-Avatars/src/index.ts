@@ -8,12 +8,6 @@ export function onLoad(): void {
 
     const UserStore = findByProps("getUser");
 
-    if (!UserStore) {
-        console.log(`${TAG} not found`);
-    }
-    else {
-        console.log(`${TAG} found`);
-    }
 
 
 }
