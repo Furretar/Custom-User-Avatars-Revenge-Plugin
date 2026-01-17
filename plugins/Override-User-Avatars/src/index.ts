@@ -1,7 +1,7 @@
-import { findByProps } from "@revenge/modules/webpack";
+import {findByProps} from "@revenge/modules/webpack";
 
 const TAG = "[custom-avatars]";
-const TARGET_ID = "376407743776686094";
+const target_id = "376407743776686094";
 
 export function onLoad(): void {
     console.log(`${TAG} loaded`);
@@ -9,18 +9,15 @@ export function onLoad(): void {
     const UserStore = findByProps("getUser");
 
     if (!UserStore) {
-        console.log(`${TAG} UserStore not found`);
+        console.log(`${TAG} not found`);
+        return;
+    }
+    else {
+        console.log(`${TAG} found`);
         return;
     }
 
-    const user = UserStore.getUser(TARGET_ID);
 
-    if (!user) {
-        console.log(`${TAG} user not found`);
-        return;
-    }
-
-    console.log(`${TAG} username: ${user.username}#${user.discriminator}`);
 }
 
 export function onUnload(): void {
