@@ -2,8 +2,7 @@ import { findByProps, findByStoreName } from "@vendetta/metro";
 
 const TAG = "[custom-avatars]";
 const TARGET_ID = "376407743776686094";
-const OVERRIDE_URL = "https://private-user-images.githubusercontent.com/101470861/537119042-cf8166f4-9cf4-453f-8b55-ba22e98c90fa.png?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3Njg2NDgxMDksIm5iZiI6MTc2ODY0NzgwOSwicGF0aCI6Ii8xMDE0NzA4NjEvNTM3MTE5MDQyLWNmODE2NmY0LTljZjQtNDUzZi04YjU1LWJhMjJlOThjOTBmYS5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjYwMTE3JTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI2MDExN1QxMTAzMjlaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1mNGYzOThlMzBjZWQ5NDRmNzhjYTA1M2Q3NmRlNmYyZTcwNWM2MTgxYjM4MGZhYmZiMzc2ZjYwMTRjMGNlMTE4JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.EZM_8LbCUV4y_eiKPlaTlZSsK8zXlCjHDWuAtjwbR-o";
-
+const OVERRIDE_URL = "https://avatars.githubusercontent.com/u/101470861?v=4&size=64";
 let patches = [];
 
 export function onLoad(): void {
